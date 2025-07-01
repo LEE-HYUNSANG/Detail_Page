@@ -1,0 +1,18 @@
+{
+  "name": "cms",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "develop": "strapi develop",
+    "start": "strapi start",
+    "build": "strapi build"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "dependencies": {
+    "@strapi/strapi": "^4.17.0",
+    "@rs-pk/strapi-grapesjs-editor": "^1.0.7",
+    "sqlite3": "^5.1.6"
+  }
+}
