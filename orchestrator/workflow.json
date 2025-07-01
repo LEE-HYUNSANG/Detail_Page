@@ -1,0 +1,128 @@
+{
+  "nodes": [
+    {
+      "id": "webhook",
+      "type": "webhook",
+      "parameters": {
+        "path": "new-product",
+        "method": "POST"
+      },
+      "name": "Strapi Webhook"
+    },
+    {
+      "id": "openai-chat",
+      "type": "httpRequest",
+      "name": "OpenAI Chat",
+      "parameters": {
+        "url": "https://api.openai.com/v1/chat/completions",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "Authorization": "Bearer {{ $env.OPENAI_API_KEY }}"
+        },
+        "bodyParameters": {
+          "model": "gpt-3.5-turbo",
+          "messages": [
+            {"role": "system", "content": "You are a copywriter"},
+            {"role": "user", "content": "Generate product copy"}
+          ]
+        }
+      }
+    },
+    {
+      "id": "openai-image",
+      "type": "httpRequest",
+      "name": "OpenAI Image",
+      "parameters": {
+        "url": "https://api.openai.com/v1/images/generations",
+        "method": "POST",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "Authorization": "Bearer {{ $env.OPENAI_API_KEY }}"
+        },
+        "bodyParameters": {
+          "prompt": "feature illustration"
+        }
+      }
+    },
+    {
+      "id": "upload-cloudinary",
+      "type": "httpRequest",
+      "name": "Upload Cloudinary",
+      "parameters": {
+        "url": "https://api.cloudinary.com/v1_1/{{ $env.CLOUDINARY_CLOUD_NAME }}/image/upload",
+        "method": "POST",
+        "queryParameters": {
+          "api_key": "{{ $env.CLOUDINARY_API_KEY }}",
+          "timestamp": "{{ Date.now() }}",
+          "signature": "{{ $env.CLOUDINARY_API_SECRET }}"
+        },
+        "bodyParameters": {
+          "file": "={{ $json[\"url\"] }}"
+        }
+      }
+    },
+    {
+      "id": "update-strapi",
+      "type": "httpRequest",
+      "name": "Update Strapi",
+      "parameters": {
+        "url": "http://cms:1337/api/products/{{ $node[\"webhook\"].json.body.id }}",
+        "method": "PUT",
+        "authentication": "headerAuth",
+        "headerParameters": {
+          "Authorization": "Bearer {{ $env.STRAPI_ADMIN_JWT_SECRET }}"
+        },
+        "bodyParameters": {
+          "data": {
+            "problemText": "={{ $node[\"openai-chat\"].json.choices[0].message.content }}",
+            "solutionText": "Generated solution",
+            "featureImages": ["={{ $node[\"upload-cloudinary\"].json.secure_url }}"]
+          }
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Strapi Webhook": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Chat",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "OpenAI Chat": {
+      "main": [
+        [
+          {
+            "node": "OpenAI Image",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "OpenAI Image": {
+      "main": [
+        [
+          {
+            "node": "Upload Cloudinary",
+            "type": "main"
+          }
+        ]
+      ]
+    },
+    "Upload Cloudinary": {
+      "main": [
+        [
+          {
+            "node": "Update Strapi",
+            "type": "main"
+          }
+        ]
+      ]
+    }
+  }
+}
